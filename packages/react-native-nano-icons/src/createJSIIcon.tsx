@@ -119,11 +119,11 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
         testID={testID}
         style={[
           baseStyle,
-          style,
           {
             fontSize: size,
             color: resolvedColor as ColorValue | undefined,
           },
+          style,
         ]}>
         {glyph}
       </Text>
