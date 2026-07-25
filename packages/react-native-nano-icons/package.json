@@ -29,6 +29,7 @@
     "clean": "del-cli lib",
     "prepare": "yarn build",
     "typecheck": "tsc",
+    "prepack": "yarn build",
     "ts-check": "tsc --noEmit",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "lint-js": "eslint 'src/**/*.{js,ts,tsx}' && prettier --check 'src/**/*.{js,jsx,ts,tsx}'",
