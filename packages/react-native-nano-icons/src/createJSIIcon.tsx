@@ -1,29 +1,31 @@
+import type { FC } from 'react';
 import {
   Platform,
   Text,
   type AccessibilityRole,
   type ColorValue,
+  type StyleProp,
   type TextStyle,
 } from 'react-native';
 
-import type { FC } from 'react';
-import type { GlyphEntry, NanoGlyphMapInput } from './core/types';
+import type { NanoGlyphMapInput } from './core/types';
 import { loadDynamicFont, useDynamicFontPending } from './loadDynamicFont';
 import type { IconComponent } from './types';
 
 const DEFAULT_ICON_SIZE = 12;
-const FALLBACK_GLYPH = '?';
+const FALLBACK_GLYPH = '';
+
 type IconProps<Name> = {
   name: Name;
   size?: number;
   color?: ColorValue;
   allowFontScaling?: boolean;
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   accessible?: boolean;
   accessibilityLabel?: string;
   accessibilityRole?: AccessibilityRole;
-  accessibilityElementsHidden?: boolean; // iOS
-  importantForAccessibility?: 'auto' | 'yes' | 'no' | 'no-hide-descendants'; // Android
+  accessibilityElementsHidden?: boolean;
+  importantForAccessibility?: 'auto' | 'yes' | 'no' | 'no-hide-descendants';
   testID?: string;
 };
 
@@ -48,22 +50,21 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
     Platform.OS === 'windows' ? `/Assets/${fontBasename}` : fontBasename;
 
   /*
-   * Decode every icon once when the icon set is created.
+   * Store only the decoded character.
    *
-   * The render path then performs only:
-   *   glyphs[name]
-   *
-   * Object lookup is used instead of Map because icon names are strings.
+   * Advance width, layer colors and additional layers are ignored.
    */
   const glyphs = Object.create(null) as Record<string, string>;
-  const iconEntries = glyphMap.i as Record<string, GlyphEntry>;
+  const iconEntries = glyphMap.i as Record<
+    string,
+    readonly [unknown, readonly (readonly [number, unknown])[]]
+  >;
 
   for (const name in iconEntries) {
-    const firstLayer = iconEntries[name]?.[1]?.[0];
+    const codepoint = iconEntries[name]?.[1]?.[0]?.[0];
 
-    glyphs[name] = firstLayer
-      ? String.fromCodePoint(firstLayer[0])
-      : FALLBACK_GLYPH;
+    glyphs[name] =
+      codepoint == null ? FALLBACK_GLYPH : String.fromCodePoint(codepoint);
   }
 
   const baseStyle: TextStyle = {
@@ -86,10 +87,6 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
     });
   }
 
-  /*
-   * Static-font fast path:
-   * no font-loading hook is called during render.
-   */
   function StaticIcon({
     name,
     size = DEFAULT_ICON_SIZE,
@@ -103,10 +100,6 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
     importantForAccessibility,
     testID,
   }: IconProps<keyof GM['i']>) {
-    const resolvedColor = Array.isArray(color) ? color[0] : color;
-
-    const glyph = glyphs[name as string] ?? FALLBACK_GLYPH;
-
     return (
       <Text
         selectable={false}
@@ -121,19 +114,15 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
           baseStyle,
           {
             fontSize: size,
-            color: resolvedColor as ColorValue | undefined,
+            color,
           },
           style,
         ]}>
-        {glyph}
+        {glyphs[name as string] ?? FALLBACK_GLYPH}
       </Text>
     );
   }
 
-  /*
-   * Dynamic-font path:
-   * isolated from static icons so static icons do not execute the hook.
-   */
   function DynamicIcon(props: IconProps<keyof GM['i']>) {
     const pending = useDynamicFontPending(true, fontBasename);
 
