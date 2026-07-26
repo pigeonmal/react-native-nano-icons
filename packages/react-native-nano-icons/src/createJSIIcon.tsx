@@ -2,32 +2,28 @@ import type { FC } from 'react';
 import {
   Platform,
   Text,
-  type AccessibilityRole,
   type ColorValue,
-  type StyleProp,
+  type TextProps,
   type TextStyle,
 } from 'react-native';
 
 import type { NanoGlyphMapInput } from './core/types';
 import { loadDynamicFont, useDynamicFontPending } from './loadDynamicFont';
-import type { IconComponent } from './types';
 
 const DEFAULT_ICON_SIZE = 12;
 const FALLBACK_GLYPH = '';
 
-type IconProps<Name> = {
+type IconProps<Name> = Omit<TextProps, 'children' | 'style' | 'ref'> & {
   name: Name;
   size?: number;
   color?: ColorValue;
-  allowFontScaling?: boolean;
-  style?: StyleProp<TextStyle>;
-  onPress?: () => void;
-  accessible?: boolean;
-  accessibilityLabel?: string;
-  accessibilityRole?: AccessibilityRole;
-  accessibilityElementsHidden?: boolean;
-  importantForAccessibility?: 'auto' | 'yes' | 'no' | 'no-hide-descendants';
-  testID?: string;
+  style?: TextProps['style'];
+};
+
+type IconComponent<GM extends NanoGlyphMapInput> = FC<
+  IconProps<keyof GM['i']>
+> & {
+  loadFont: (font?: number | string | { uri: string }) => Promise<void>;
 };
 
 export function createJSIIcon<GM extends NanoGlyphMapInput>(
@@ -51,11 +47,13 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
     Platform.OS === 'windows' ? `/Assets/${fontBasename}` : fontBasename;
 
   /*
-   * Store only the decoded character.
+   * Decode each glyph once.
    *
-   * Advance width, layer colors and additional layers are ignored.
+   * Only the first layer's codepoint is retained.
+   * Width, source color and additional layers are ignored.
    */
   const glyphs = Object.create(null) as Record<string, string>;
+
   const iconEntries = glyphMap.i as Record<
     string,
     readonly [unknown, readonly (readonly [number, unknown])[]]
@@ -68,6 +66,9 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
       codepoint == null ? FALLBACK_GLYPH : String.fromCodePoint(codepoint);
   }
 
+  /*
+   * This object is created once per icon set.
+   */
   const baseStyle: TextStyle = {
     fontFamily,
     fontWeight: 'normal',
@@ -93,26 +94,16 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
     size = DEFAULT_ICON_SIZE,
     color,
     style,
-    onPress,
     allowFontScaling = false,
-    accessible,
-    accessibilityLabel,
-    accessibilityRole = 'image',
-    accessibilityElementsHidden,
-    importantForAccessibility,
-    testID,
+    ...textProps
   }: IconProps<keyof GM['i']>) {
+    const glyph = glyphs[name as string] ?? FALLBACK_GLYPH;
+
     return (
       <Text
-        onPress={onPress}
+        {...textProps}
         selectable={false}
         allowFontScaling={allowFontScaling}
-        accessible={accessible}
-        accessibilityRole={accessibilityRole}
-        accessibilityLabel={accessibilityLabel ?? String(name)}
-        accessibilityElementsHidden={accessibilityElementsHidden}
-        importantForAccessibility={importantForAccessibility}
-        testID={testID}
         style={[
           baseStyle,
           {
@@ -121,7 +112,7 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
           },
           style,
         ]}>
-        {glyphs[name as string] ?? FALLBACK_GLYPH}
+        {glyph}
       </Text>
     );
   }
@@ -142,13 +133,11 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
 
   Icon.displayName = `JSIIcon(${fontBasename})`;
 
-  const IconComponentResult = Icon as unknown as IconComponent<GM>;
+  const IconComponentResult = Icon as IconComponent<GM>;
 
   IconComponentResult.loadFont = (override) =>
     isDynamic
-      ? loadDynamicFont(fontBasename, override ?? font, {
-          force: true,
-        })
+      ? loadDynamicFont(fontBasename, override ?? font, { force: true })
       : Promise.resolve();
 
   return IconComponentResult;
