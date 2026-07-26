@@ -1,9 +1,6 @@
 type ConfigPluginFn = (...args: unknown[]) => unknown;
 
-const plugin = (
-  require('./plugin/src/index') as {
-    default: ConfigPluginFn;
-  }
-).default;
+const plugin = (require('./plugin/src/index') as { default: ConfigPluginFn })
+  .default;
 
-export = plugin;
+module.exports = Object.assign(plugin, {});
