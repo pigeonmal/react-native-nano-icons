@@ -21,6 +21,7 @@ type IconProps<Name> = {
   color?: ColorValue;
   allowFontScaling?: boolean;
   style?: StyleProp<TextStyle>;
+  onPress?: () => void;
   accessible?: boolean;
   accessibilityLabel?: string;
   accessibilityRole?: AccessibilityRole;
@@ -92,6 +93,7 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
     size = DEFAULT_ICON_SIZE,
     color,
     style,
+    onPress,
     allowFontScaling = false,
     accessible,
     accessibilityLabel,
@@ -102,6 +104,7 @@ export function createJSIIcon<GM extends NanoGlyphMapInput>(
   }: IconProps<keyof GM['i']>) {
     return (
       <Text
+        onPress={onPress}
         selectable={false}
         allowFontScaling={allowFontScaling}
         accessible={accessible}
