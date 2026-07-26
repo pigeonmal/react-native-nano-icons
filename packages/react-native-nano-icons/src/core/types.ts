@@ -123,7 +123,7 @@ export type PyodideModule = {
   };
 };
 
-export type GlyphLayer = [codepoint: number, color: string];
+export type GlyphLayer = number;
 export type GlyphEntry = [adv: number, layers: GlyphLayer[]];
 export type IconsMap = Record<string, GlyphEntry>;
 

@@ -6,25 +6,24 @@ import {
   parseCompileTtfFromGlyphsError,
   type FontGlyph,
 } from '../font/compile.js';
-import { picoFromFile, PathKitManager } from './managers.js';
+import { PathKitManager, picoFromFile } from './managers.js';
 
+import { computePlacement, transformPathForFont } from '../svg/layers.js';
+import {
+  extractOriginalEvenoddDs,
+  parseFlattenedSvg,
+  preprocessSvg,
+  restoreOriginalEvenoddDs,
+  shouldSkipPath,
+  validateSvg,
+} from '../svg/svg_dom.js';
+import { convertEvenoddToWinding } from '../svg/svg_pathops.js';
+import type { GlyphLayer, NanoGlyphMap, NanoLogger } from '../types.js';
 import {
   ensureDir,
   type PipelineConfig,
   type PipelinePaths,
 } from './config.js';
-import {
-  parseFlattenedSvg,
-  preprocessSvg,
-  shouldSkipPath,
-  validateSvg,
-  extractOriginalEvenoddDs,
-  restoreOriginalEvenoddDs,
-} from '../svg/svg_dom.js';
-import { computePlacement, transformPathForFont } from '../svg/layers.js';
-import { convertEvenoddToWinding } from '../svg/svg_pathops.js';
-import type { GlyphLayer, NanoGlyphMap } from '../types.js';
-import type { NanoLogger } from '../types.js';
 
 export type PipelineResult = {
   ttfPath: string;
@@ -228,7 +227,7 @@ export async function runPipeline(
         d: fontD,
       });
 
-      layers.push([cp, p.fill || 'black']);
+      layers.push(cp);
     }
 
     if (layers.length > 0) {
